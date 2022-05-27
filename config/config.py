@@ -8,12 +8,12 @@ PROGRAM = str(BASE_DIR).split(sep=os.path.sep)[-1]
 TEMP_DIR = tempfile.gettempdir()
 
 QUALITY = 7
-CHUNK_SIZE = 20 * 1024 * 1024
+CHUNK_SIZE = 10000000
 
-USE_LOG_FILE = True
+USE_LOG_FILE = False
 LOG_FILE = '/tmp/audextractorbot.log'
 
-USE_PID_FILE = True
+USE_PID_FILE = False
 PID_FILE = '/tmp/audextractorbot.pid'
 
 CERTIFICATE_PATH = os.path.join(BASE_DIR, 'cert', 'api-parusinf-ru.crt')
