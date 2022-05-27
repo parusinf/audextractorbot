@@ -10,7 +10,7 @@ TEMP_DIR = tempfile.gettempdir()
 QUALITY = 7
 CHUNK_SIZE = 20 * 1024 * 1024
 
-USE_LOG_FILE = False
+USE_LOG_FILE = True
 LOG_FILE = '/tmp/audextractorbot.log'
 
 USE_PID_FILE = True
