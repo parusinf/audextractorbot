@@ -1,0 +1,10 @@
+[Unit]
+Description=Telegram bot @audextractorbot_bot
+After=network-online.target
+Requires=network-online.target
+
+[Service]
+ExecStart=/srv/audextractorbot/venv/bin/python /srv/audextractorbot/main.py
+
+[Install]
+WantedBy=multi-user.target

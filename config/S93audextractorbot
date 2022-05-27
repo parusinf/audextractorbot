@@ -1,0 +1,19 @@
+#!/bin/sh
+
+ROOT=/opt
+SRV=$ROOT/srv
+
+case $1 in
+	start)
+	$ROOT/bin/python3 $SRV/audextractorbot/main.py start &
+	;;
+	stop)
+	$ROOT/bin/python3 $SRV/audextractorbot/main.py stop &
+	;;
+	restart)
+	$ROOT/bin/python3 $SRV/audextractorbot/main.py restart &
+	;;
+	*)
+	echo "Usage: $0 {start|stop|restart}"
+	;;
+esac
