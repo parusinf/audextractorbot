@@ -2,3 +2,4 @@
 __pycache__
 /venv/
 /config/token.py
+/config/telegram-bot-api.service

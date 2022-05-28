@@ -7,8 +7,12 @@ BASE_DIR = pathlib.Path(__file__).parent.parent
 PROGRAM = str(BASE_DIR).split(sep=os.path.sep)[-1]
 TEMP_DIR = tempfile.gettempdir()
 
+TUBE_FORMAT = 140
+ENCODE_MP3 = False
+ENCODE_DURATION_COEFF = 53 / (70 * 1024 * 1024)
 QUALITY = 4
-CHUNK_SIZE = 10 * 1024 * 1024
+SPLIT_AUDIO = False
+CHUNK_SIZE = 20 * 1024 * 1024
 
 USE_LOG_FILE = False
 LOG_FILE = '/tmp/audextractorbot.log'
