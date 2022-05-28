@@ -1,4 +1,3 @@
-from mutagen.mp3 import MP3
 import os
 import shutil
 import tempfile
@@ -9,12 +8,11 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.types.message import ContentType
 from aiogram.types.input_file import InputFile
 from aiogram.types import ParseMode
+from app.sys import shell, audio
 import config.config as config
 
 
 # Команды бота
-from app.sys import shell
-
 BOT_COMMANDS = '''ping - проверка отклика бота
 help - как пользоваться этим ботом?'''
 
@@ -34,7 +32,7 @@ async def cmd_help(message: types.Message):
     commands = [format_command(cl) for cl in BOT_COMMANDS.splitlines()]
     await message.reply(
         md.text(
-            md.text(f'Пришлите ссылку с видео'),
+            md.text(f'Пришлите ссылку с видео на youtube'),
             md.text(md.bold('\nКоманды бота')),
             *commands,
             md.text(md.bold('\nРазработчик')),
@@ -57,6 +55,7 @@ async def cmd_ping(message: types.Message):
 
 @dp.message_handler(content_types=ContentType.TEXT)
 async def process_results(message: types.Message):
+    await message.reply(f'Скачиваю и перекодирую аудио...')
     url = message.text
     dirpath = tempfile.mkdtemp()
     retcode = await shell.run(f'cd {dirpath}; yt-dlp -f 140 {url}')
@@ -64,33 +63,35 @@ async def process_results(message: types.Message):
         filenames = next(walk(dirpath), (None, None, []))[2]
         for filename in filenames:
             filepath = os.path.join(dirpath, filename)
-            filename_wo_ext = os.path.splitext(filename)[0]
-            mp3filename = f'{filename_wo_ext}.mp3'
-            mp3filepath = os.path.join(dirpath, mp3filename)
-            cmd = f'ffmpeg -i "{filepath}" -codec:a libmp3lame -qscale:a {config.QUALITY} "{mp3filepath}"'
-            retcode = await shell.run(cmd)
+            chunk_duration = int(audio.get_duration(filepath) * config.CHUNK_SIZE / os.path.getsize(filepath))
+            filename_wo_ext, filename_ext = os.path.splitext(filename)
+            chunk_name_template = f'{filename_wo_ext}_%02d.{filename_ext}'
+            chunk_path_template = os.path.join(dirpath, chunk_name_template)
+            retcode = await shell.run(
+                f'ffmpeg -i "{filepath}" -f segment -segment_time {chunk_duration} '
+                f'-c copy "{chunk_path_template}"'
+            )
             if retcode == 0:
                 os.remove(filepath)
-                mp3size = os.path.getsize(mp3filepath)
-                if mp3size > config.CHUNK_SIZE:
-                    audio = MP3(mp3filepath)
-                    duration = audio.info.length
-                    chunk_duration = duration * config.CHUNK_SIZE // mp3size
-                    mp3chunk_filename = f'{filename_wo_ext}_%03d.mp3'
-                    mp3chunk_filepath = os.path.join(dirpath, mp3chunk_filename)
-                    cmd = f'ffmpeg -i "{mp3filepath}" -f segment -segment_time {chunk_duration} ' \
-                          f'-c copy "{mp3chunk_filepath}"'
-                    retcode = await shell.run(cmd)
+                chunk_filenames = next(walk(dirpath), (None, None, []))[2]
+                for index, chunk_filename in enumerate(chunk_filenames):
+                    chunk_filepath = os.path.join(dirpath, chunk_filename)
+                    chunk_filename_wo_ext = os.path.splitext(chunk_filename)[0]
+                    chunk_filename_mp3 = f'{chunk_filename_wo_ext}.mp3'
+                    chunk_filepath_mp3 = os.path.join(dirpath, chunk_filename_mp3)
+                    retcode = await shell.run(
+                        f'ffmpeg -i "{chunk_filepath}" -codec:a libmp3lame '
+                        f'-qscale:a {config.QUALITY} "{chunk_filepath_mp3}"'
+                    )
                     if retcode == 0:
-                        os.remove(mp3filepath)
-                        mp3filenames = next(walk(dirpath), (None, None, []))[2]
-                        for mp3filename in mp3filenames:
-                            mp3filepath = os.path.join(dirpath, mp3filename)
-                            await message.reply_document(InputFile(mp3filepath, mp3filename))
+                        await message.reply_document(
+                            InputFile(chunk_filepath_mp3, chunk_filename_mp3),
+                            caption=f'{index+1}/{len(chunk_filenames)}',
+                        )
                     else:
-                        await message.reply_document(InputFile(mp3filepath, mp3filename))
-                else:
-                    await message.reply_document(InputFile(mp3filepath, mp3filename))
-    if retcode != 0:
+                        await message.reply_document(InputFile(chunk_filepath, chunk_filename))
+            else:
+                await message.reply_document(InputFile(filepath, filename))
+    else:
         await message.reply(f'Код ошибки обработки аудио: {retcode}')
     shutil.rmtree(dirpath)

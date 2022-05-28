@@ -7,8 +7,8 @@ BASE_DIR = pathlib.Path(__file__).parent.parent
 PROGRAM = str(BASE_DIR).split(sep=os.path.sep)[-1]
 TEMP_DIR = tempfile.gettempdir()
 
-QUALITY = 7
-CHUNK_SIZE = 10000000
+QUALITY = 4
+CHUNK_SIZE = 10 * 1024 * 1024
 
 USE_LOG_FILE = False
 LOG_FILE = '/tmp/audextractorbot.log'
