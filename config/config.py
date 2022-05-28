@@ -31,6 +31,9 @@ WEBHOOK_URL = f'{WEBHOOK_HOST}{WEBHOOK_PATH}'
 WEBAPP_HOST = '0.0.0.0'
 WEBAPP_PORT = 5004
 
+# Telegram Bot API Server
+BOT_API_SERVER_URL = 'http://localhost:5000'
+
 # Разработчик
 DEVELOPER_NAME = 'Павел Никитин'
 DEVELOPER_TELEGRAM = '@nikitinpa'

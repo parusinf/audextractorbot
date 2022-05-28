@@ -8,7 +8,6 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.types.message import ContentType
 from aiogram.types.input_file import InputFile
 from aiogram.types import ParseMode
-
 import tools.plural
 from app.sys import shell, audio
 import config.config as config
@@ -20,7 +19,7 @@ BOT_COMMANDS = '''ping - проверка отклика бота
 help - как пользоваться этим ботом?'''
 
 # Create private Bot API server endpoints wrapper
-local_server = TelegramAPIServer.from_base('http://localhost:5000')
+local_server = TelegramAPIServer.from_base(config.BOT_API_SERVER_URL)
 
 # Aiogram Telegram Bot
 bot = Bot(token=config.BOT_TOKEN, server=local_server)
