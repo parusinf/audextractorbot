@@ -91,14 +91,14 @@ async def process_results(message: types.Message):
                             f'-qscale:a {config.QUALITY} "{chunk_filepath_mp3}"'
                         )
                         if retcode == 0:
-                            await message.reply_document(
+                            await message.answer_audio(
                                 InputFile(chunk_filepath_mp3, chunk_filename_mp3),
                                 caption=f'Часть {index+1} из {len(chunk_filenames)}',
                             )
                         else:
                             await message.reply(f'Код ошибки перекодирования аудио в mp3: {retcode}')
                     else:
-                        await message.reply_document(
+                        await message.answer_audio(
                             InputFile(chunk_filepath, chunk_filename),
                             caption=f'Часть {index + 1} из {len(chunk_filenames)}',
                         )
@@ -117,11 +117,11 @@ async def process_results(message: types.Message):
                     f'-qscale:a {config.QUALITY} "{filepath_mp3}"'
                 )
                 if retcode == 0:
-                    await message.reply_document(InputFile(filepath_mp3, filename_mp3))
+                    await message.answer_audio(InputFile(filepath_mp3, filename_mp3))
                 else:
                     await message.reply(f'Код ошибки перекодирования аудио в mp3: {retcode}')
             else:
-                await message.reply_document(InputFile(filepath, filename))
+                await message.answer_audio(InputFile(filepath, filename))
     else:
         await message.reply(f'Код ошибки скачивания аудио: {retcode}')
     shutil.rmtree(dirpath)
