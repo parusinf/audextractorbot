@@ -46,7 +46,7 @@ async def cmd_help(message: types.Message):
     commands = [format_command(cl) for cl in BOT_COMMANDS.splitlines()]
     await message.reply(
         md.text(
-            md.text(f'Поделись со мной ссылкой на youtube, я извлеку для тебя аудио'),
+            md.text(f'Поделись со мной ссылкой youtube или rutube, я извлеку для тебя аудио'),
             md.text(md.bold('\nКоманды бота')),
             *commands,
             md.text(md.bold('\nРазработчик')),
