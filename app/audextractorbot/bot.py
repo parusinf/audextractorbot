@@ -5,11 +5,11 @@ from os import walk
 import aiogram.utils.markdown as md
 from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.dispatcher.filters.state import StatesGroup, State
 from aiogram.types.message import ContentType
 from aiogram.types.input_file import InputFile
 from aiogram.types import ParseMode
-import tools.plural
-from app.sys import shell, audio
+from app.sys import shell
 import config.config as config
 from aiogram.bot.api import TelegramAPIServer
 
@@ -27,6 +27,15 @@ storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 
 
+# Состояния конечного автомата
+class Form(StatesGroup):
+    set_tag = State()    # Установить наименование и исполнителя?
+    name = State()       # Наименование
+    artist = State()     # Артист
+    set_image = State()  # Установить картинку?
+    image = State()      # Картинка
+
+
 @dp.message_handler(commands=['help', 'start'])
 async def cmd_help(message: types.Message):
     """Что может делать этот бот?"""
@@ -37,7 +46,7 @@ async def cmd_help(message: types.Message):
     commands = [format_command(cl) for cl in BOT_COMMANDS.splitlines()]
     await message.reply(
         md.text(
-            md.text(f'Поделись со мной ссылкой любимой передачи или музыки с youtube, я извлеку для тебя аудио'),
+            md.text(f'Поделись со мной ссылкой на youtube, я извлеку для тебя аудио'),
             md.text(md.bold('\nКоманды бота')),
             *commands,
             md.text(md.bold('\nРазработчик')),
@@ -59,69 +68,53 @@ async def cmd_ping(message: types.Message):
 
 
 @dp.message_handler(content_types=ContentType.TEXT)
-async def process_results(message: types.Message):
+async def process_url(message: types.Message):
+    """markup = types.ReplyKeyboardMarkup(resize_keyboard=True, selective=True)
+    markup.add(['Да', 'Нет'])
+    await message.reply('Установить наименование и исполнителя?', reply_markup=markup)"""
+    if message.from_user.is_bot:
+        await message.reply('Обслуживание ботов не поддерживается')
+        return
     await message.reply(f'Скачиваю аудио...')
     url = message.text
+    dirpath, filename = await get_audio(url)
+    if filename:
+        await message.answer_audio(InputFile(os.path.join(dirpath, filename), filename))
+    else:
+        await message.reply('Не получилось скачать аудио')
+    shutil.rmtree(dirpath)
+
+
+async def get_audio(url):
     dirpath = tempfile.mkdtemp()
-    retcode = await shell.run(f'cd {dirpath}; yt-dlp -f {config.TUBE_FORMAT} {url}')
+    format_code = await select_format(url)
+    retcode = await shell.run(f'cd {dirpath}; yt-dlp -f {format_code} {url}')
     if retcode == 0:
         filename = next(walk(dirpath), (None, None, []))[2][0]
-        filepath = os.path.join(dirpath, filename)
-        filesize = os.path.getsize(filepath)
-        if config.SPLIT_AUDIO and filesize > config.CHUNK_SIZE:
-            chunk_duration = int(audio.get_duration(filepath) * config.CHUNK_SIZE / filesize)
-            filename_wo_ext, filename_ext = os.path.splitext(filename)
-            chunk_name_template = f'{filename_wo_ext}_%02d{filename_ext}'
-            chunk_path_template = os.path.join(dirpath, chunk_name_template)
+        if url.find('rutube') > 0:
+            filename_wo_ext = os.path.splitext(filename)[0]
+            filename_mp3 = f'{filename_wo_ext}.mp3'
+            filepath_mp3 = os.path.join(dirpath, filename_mp3)
             retcode = await shell.run(
-                f'ffmpeg -i "{filepath}" -f segment -segment_time {chunk_duration} '
-                f'-c copy "{chunk_path_template}"'
+                f'ffmpeg -i "{os.path.join(dirpath, filename)}" -codec:a libmp3lame '
+                f'-qscale:a {config.QUALITY} "{filepath_mp3}"'
             )
             if retcode == 0:
-                os.remove(filepath)
-                chunk_filenames = next(walk(dirpath), (None, None, []))[2]
-                for index, chunk_filename in enumerate(chunk_filenames):
-                    chunk_filepath = os.path.join(dirpath, chunk_filename)
-                    if config.ENCODE_MP3:
-                        chunk_filename_wo_ext = os.path.splitext(chunk_filename)[0]
-                        chunk_filename_mp3 = f'{chunk_filename_wo_ext}.mp3'
-                        chunk_filepath_mp3 = os.path.join(dirpath, chunk_filename_mp3)
-                        retcode = await shell.run(
-                            f'ffmpeg -i "{chunk_filepath}" -codec:a libmp3lame '
-                            f'-qscale:a {config.QUALITY} "{chunk_filepath_mp3}"'
-                        )
-                        if retcode == 0:
-                            await message.answer_audio(
-                                InputFile(chunk_filepath_mp3, chunk_filename_mp3),
-                                caption=f'Часть {index+1} из {len(chunk_filenames)}',
-                            )
-                        else:
-                            await message.reply(f'Код ошибки перекодирования аудио в mp3: {retcode}')
-                    else:
-                        await message.answer_audio(
-                            InputFile(chunk_filepath, chunk_filename),
-                            caption=f'Часть {index + 1} из {len(chunk_filenames)}',
-                        )
-            else:
-                await message.reply(f'Код ошибки разрезания аудио на части: {retcode}')
-        else:
-            if config.ENCODE_MP3:
-                encode_duration = int(filesize * config.ENCODE_DURATION_COEFF) + 1
-                await message.reply(
-                    f'Перекодирую аудио в mp3 ({encode_duration} {tools.plural.seconds(encode_duration)})...')
-                filename_wo_ext = os.path.splitext(filename)[0]
-                filename_mp3 = f'{filename_wo_ext}.mp3'
-                filepath_mp3 = os.path.join(dirpath, filename_mp3)
-                retcode = await shell.run(
-                    f'ffmpeg -i "{filepath}" -codec:a libmp3lame '
-                    f'-qscale:a {config.QUALITY} "{filepath_mp3}"'
-                )
-                if retcode == 0:
-                    await message.answer_audio(InputFile(filepath_mp3, filename_mp3))
-                else:
-                    await message.reply(f'Код ошибки перекодирования аудио в mp3: {retcode}')
-            else:
-                await message.answer_audio(InputFile(filepath, filename))
+                filename = filename_mp3
+        return dirpath, filename
     else:
-        await message.reply(f'Код ошибки скачивания аудио: {retcode}')
-    shutil.rmtree(dirpath)
+        return None, None
+
+
+async def select_format(url):
+    if url.find('rutube') > 0:
+        retcode, stdout, _ = await shell.run_and_logging(f'yt-dlp -F {url}')
+        if retcode == 0:
+            format_lines = stdout.splitlines()
+            # первая строка в списке форматов с минимальным битрейтом
+            format_code = format_lines[7].split(' ')[0]
+        else:
+            format_code = None
+    else:
+        format_code = config.TUBE_FORMAT
+    return format_code
