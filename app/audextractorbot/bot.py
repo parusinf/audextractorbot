@@ -75,14 +75,15 @@ async def process_url(message: types.Message):
     if message.from_user.is_bot:
         await message.reply('Обслуживание ботов не поддерживается')
         return
-    await message.reply(f'Скачиваю аудио...')
+    dl_message = await message.reply(f'Скачиваю аудио...')
     url = message.text
     dirpath, filename = await get_audio(url, message)
     if filename:
-        await message.answer_audio(InputFile(os.path.join(dirpath, filename), filename))
+        await message.reply_audio(InputFile(os.path.join(dirpath, filename), filename))
+        shutil.rmtree(dirpath)
     else:
         await message.reply('Не получилось скачать аудио')
-    shutil.rmtree(dirpath)
+    await dl_message.delete()
 
 
 async def get_audio(url, message):
