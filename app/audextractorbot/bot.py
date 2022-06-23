@@ -15,8 +15,12 @@ from aiogram.bot.api import TelegramAPIServer
 
 
 # Команды бота
-BOT_COMMANDS = '''ping - проверка отклика бота
+BOT_COMMANDS = '''tag - спрашивать наименование и исполнителя
+notag - не спрашивать наименование и исполнителя
+ping - проверка отклика бота
 help - как пользоваться этим ботом?'''
+
+SUPPORTED_URLS = ['youtu', 'rutube']
 
 # Create private Bot API server endpoints wrapper
 local_server = TelegramAPIServer.from_base(config.BOT_API_SERVER_URL)
@@ -31,7 +35,7 @@ dp = Dispatcher(bot, storage=storage)
 class Form(StatesGroup):
     set_tag = State()    # Установить наименование и исполнителя?
     name = State()       # Наименование
-    artist = State()     # Артист
+    artist = State()     # Исполнитель
     set_image = State()  # Установить картинку?
     image = State()      # Картинка
 
@@ -46,7 +50,7 @@ async def cmd_help(message: types.Message):
     commands = [format_command(cl) for cl in BOT_COMMANDS.splitlines()]
     await message.reply(
         md.text(
-            md.text(f'Поделись со мной ссылкой youtube или rutube, я извлеку для тебя аудио'),
+            md.text(f'Поделись ссылкой и я извлеку аудио'),
             md.text(md.bold('\nКоманды бота')),
             *commands,
             md.text(md.bold('\nРазработчик')),
@@ -67,6 +71,15 @@ async def cmd_ping(message: types.Message):
     await message.reply('pong')
 
 
+def url_is_supported(url):
+    is_supported = False
+    for u in SUPPORTED_URLS:
+        if url.find(u) > 0:
+            is_supported = True
+            break
+    return is_supported
+
+
 @dp.message_handler(content_types=ContentType.TEXT)
 async def process_url(message: types.Message):
     """markup = types.ReplyKeyboardMarkup(resize_keyboard=True, selective=True)
@@ -75,15 +88,18 @@ async def process_url(message: types.Message):
     if message.from_user.is_bot:
         await message.reply('Обслуживание ботов не поддерживается')
         return
-    dl_message = await message.reply(f'Скачиваю аудио...')
     url = message.text
-    dirpath, filename = await get_audio(url, message)
-    if filename:
-        await message.reply_audio(InputFile(os.path.join(dirpath, filename), filename))
-        shutil.rmtree(dirpath)
+    if url_is_supported(url):
+        dl_message = await message.reply(f'Скачиваю аудио...')
+        dirpath, filename = await get_audio(url, message)
+        if filename:
+            await message.reply_audio(InputFile(os.path.join(dirpath, filename), filename))
+            shutil.rmtree(dirpath)
+        else:
+            await message.reply('Не получилось скачать аудио')
+        await dl_message.delete()
     else:
-        await message.reply('Не получилось скачать аудио')
-    await dl_message.delete()
+        await message.reply(f'Поддерживаемые ссылки: {SUPPORTED_URLS}')
 
 
 async def get_audio(url, message):
