@@ -9,10 +9,8 @@ TEMP_DIR = tempfile.gettempdir()
 
 TUBE_FORMAT = 140
 ENCODE_MP3 = False
-ENCODE_DURATION_COEFF = 53 / (70 * 1024 * 1024)
 QUALITY = 6
-SPLIT_AUDIO = False
-CHUNK_SIZE = 20 * 1024 * 1024
+THUMB_FILENAME = 'thumb.jpg'
 
 USE_LOG_FILE = False
 LOG_FILE = '/tmp/audextractorbot.log'

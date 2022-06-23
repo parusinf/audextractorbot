@@ -1,2 +1,3 @@
-aiogram==2.21
-mutagen~=1.45.1
+aiogram
+mutagen
+music-tag
