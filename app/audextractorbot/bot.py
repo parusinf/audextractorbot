@@ -77,7 +77,7 @@ async def process_url(message: types.Message):
         return
     await message.reply(f'Скачиваю аудио...')
     url = message.text
-    dirpath, filename = await get_audio(url)
+    dirpath, filename = await get_audio(url, message)
     if filename:
         await message.answer_audio(InputFile(os.path.join(dirpath, filename), filename))
     else:
@@ -85,10 +85,10 @@ async def process_url(message: types.Message):
     shutil.rmtree(dirpath)
 
 
-async def get_audio(url):
+async def get_audio(url, message):
     dirpath = tempfile.mkdtemp()
     format_code = await select_format(url)
-    retcode = await shell.run(f'cd {dirpath}; yt-dlp -f {format_code} {url}')
+    retcode, stdout, stderr = await shell.run_and_logging(f'cd {dirpath}; yt-dlp -f {format_code} {url}')
     if retcode == 0:
         filename = next(walk(dirpath), (None, None, []))[2][0]
         if url.find('rutube') > 0:
@@ -103,6 +103,7 @@ async def get_audio(url):
                 filename = filename_mp3
         return dirpath, filename
     else:
+        await message.reply(f'{stdout}\n{stderr}')
         return None, None
 
 
