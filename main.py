@@ -32,7 +32,6 @@ async def on_startup(_: Dispatcher):
 
 
 async def on_shutdown(_: Dispatcher):
-    # async_get_audio.stop()
     await bot.set_webhook('')
     await db.on_disconnect()
     if config.USE_PID_FILE:
