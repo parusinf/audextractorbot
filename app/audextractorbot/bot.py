@@ -10,7 +10,7 @@ from aiogram.dispatcher.filters.state import StatesGroup, State
 from aiogram.types.message import ContentType
 from aiogram.types.input_file import InputFile
 from aiogram.types import ParseMode
-from app.store.database.tools import human_size, SizeUnit
+from app.store.database.tools import human_size
 from app.sys import shell
 import config.config as config
 from aiogram.bot.api import TelegramAPIServer
@@ -21,7 +21,6 @@ import app.store.database.models as db
 # Команды бота
 BOT_COMMANDS = '''tag - настройка установки тегов
 stat - статистика
-ping - проверка отклика бота
 help - как пользоваться этим ботом?'''
 
 SUPPORTED_URLS = ['youtu', 'rutube']
@@ -194,17 +193,8 @@ async def cmd_help(message: types.Message):
     )
 
 
-@dp.message_handler(commands='ping')
-async def cmd_ping(message: types.Message):
-    """Проверка отклика бота"""
-    await message.reply('pong')
-
-
 @dp.message_handler(content_types=ContentType.TEXT)
 async def handle_url(message: types.Message, state: FSMContext):
-    if message.from_user.is_bot:
-        await message.reply('Обслуживание ботов не поддерживается')
-        return
     url = message.text
     if url_is_supported(url):
         dl_message = await message.reply(f'Скачиваю аудио...')
