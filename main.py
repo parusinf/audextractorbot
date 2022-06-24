@@ -10,6 +10,7 @@ from aiogram.utils.executor import start_webhook
 import config.config as config
 from app.audextractorbot.bot import bot, dp
 from app.sys.pid_file import read_pid_file, write_pid_file, remove_pid_file
+from app.store.database.models import db
 
 logging.basicConfig(
     filename=config.LOG_FILE if config.USE_LOG_FILE else None,
@@ -17,6 +18,7 @@ logging.basicConfig(
 
 
 async def on_startup(_: Dispatcher):
+    await db.on_connect()
     await bot.set_webhook(
         config.WEBHOOK_URL,
         certificate=InputFile(Path(CERTIFICATE_PATH)),
@@ -31,6 +33,7 @@ async def on_startup(_: Dispatcher):
 
 async def on_shutdown(_: Dispatcher):
     await bot.set_webhook('')
+    await db.on_disconnect()
     if config.USE_PID_FILE:
         pid_from_file = remove_pid_file()
         pid_info = f' pid={pid_from_file}'

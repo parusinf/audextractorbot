@@ -10,14 +10,17 @@ from aiogram.dispatcher.filters.state import StatesGroup, State
 from aiogram.types.message import ContentType
 from aiogram.types.input_file import InputFile
 from aiogram.types import ParseMode
+from app.store.database.tools import human_size, SizeUnit
 from app.sys import shell
 import config.config as config
 from aiogram.bot.api import TelegramAPIServer
 import music_tag
+import app.store.database.models as db
 
 
 # Команды бота
-BOT_COMMANDS = '''start - инициализация бота
+BOT_COMMANDS = '''tag - настройка установки тегов
+stat - статистика
 ping - проверка отклика бота
 help - как пользоваться этим ботом?'''
 
@@ -44,8 +47,8 @@ class Form(StatesGroup):
     thumb = State()      # Обложка
 
 
-@dp.message_handler(commands='start')
-async def cmd_start(message: types.Message):
+@dp.message_handler(commands=['tag', 'start'])
+async def cmd_tag(message: types.Message):
     await message.answer('Устанавливать заголовок и исполнителя?', reply_markup=markup_yes_no)
     await Form.set_tag.set()
 
@@ -53,8 +56,16 @@ async def cmd_start(message: types.Message):
 @dp.message_handler(state=Form.set_tag)
 async def handle_set_tag(message: types.Message, state: FSMContext):
     set_tag = message.text == 'Да'
-    await state.update_data(set_tag=set_tag)
-    await state.reset_state(with_data=False)
+    user = await get_user(message)
+    user.update({'set_tag': set_tag})
+    await db.update_user(user)
+    await message.reply('/tag - настройка установки тегов')
+    data = await state.get_data()
+    if get_value('filename', data):
+        await message.answer('Исполнитель', reply_markup=types.ReplyKeyboardRemove())
+        await Form.artist.set()
+    else:
+        await state.finish()
     # await message.answer('Устанавливать обложку?', reply_markup=markup_yes_no)
     # await Form.set_thumb.set()
 
@@ -62,8 +73,11 @@ async def handle_set_tag(message: types.Message, state: FSMContext):
 @dp.message_handler(state=Form.set_thumb)
 async def handle_set_thumb(message: types.Message, state: FSMContext):
     set_thumb = message.text == 'Да'
-    await state.update_data(set_thumb=set_thumb)
-    await state.reset_state(with_data=False)
+    user = await get_user(message)
+    user.update({'set_thumb': set_thumb})
+    await db.update_user(user)
+    await message.reply('/tag - настройка установки тегов', reply_markup=types.ReplyKeyboardRemove())
+    await state.finish()
 
 
 @dp.message_handler(state=Form.artist)
@@ -76,12 +90,12 @@ async def handle_artist(message: types.Message, state: FSMContext):
 @dp.message_handler(state=Form.title)
 async def handle_title(message: types.Message, state: FSMContext):
     await state.update_data(title=message.text)
-    data = await state.get_data()
-    if get_value('set_thumb', data):
+    user = await get_user(message)
+    if user['set_thumb']:
         await message.answer('Обложка')
         await Form.thumb.set()
     else:
-        await send_audio(state)
+        await send_audio(message, state)
 
 
 @dp.message_handler(state=Form.thumb, content_types=ContentType.PHOTO)
@@ -90,10 +104,10 @@ async def handle_thumb(message: types.Message, state: FSMContext):
     dirpath = get_value('dirpath', data)
     await message.photo[0].download(destination_dir=dirpath)
     await state.update_data(thumb=config.THUMB_FILENAME)
-    await send_audio(state)
+    await send_audio(message, state)
 
 
-async def send_audio(state: FSMContext):
+async def send_audio(message: types.Message, state: FSMContext):
     # Подготовка данных
     data = await state.get_data()
     dirpath = get_value('dirpath', data)
@@ -101,14 +115,14 @@ async def send_audio(state: FSMContext):
     filepath = os.path.join(dirpath, filename)
     url_message: types.Message = get_value('url_message', data)
     dl_message = get_value('dl_message', data)
-    set_tag = get_value('set_tag', data)
+    user = await get_user(message)
 
     # Установка тегов
-    artist: str = get_value('artist', data)
-    title: str = get_value('title', data)
+    artist = get_value('artist', data)
+    title = get_value('title', data)
     thumb = get_value('thumb', data)
     thumb_file = InputFile(os.path.join(dirpath, thumb), filename) if thumb else None
-    if set_tag:
+    if user['set_tag']:
         ext = os.path.splitext(filename)[1]
         new_filename = f'{artist.replace(" ", "_")}__{title.replace(" ", "_")}{ext}'
         new_filepath = os.path.join(dirpath, new_filename)
@@ -131,19 +145,28 @@ async def send_audio(state: FSMContext):
         thumb=thumb_file,
     )
 
+    # Сбор статистики
+    dl_count = user['dl_count'] + 1
+    dl_size = user['dl_size'] + os.path.getsize(filepath)
+    user.update({'dl_count': dl_count, 'dl_size': dl_size})
+    await db.update_user(user)
+
     # Освобождение ресурсов
     shutil.rmtree(dirpath)
     await dl_message.delete()
-    data.pop('dirpath', None)
-    data.pop('filename', None)
-    data.pop('artist', None)
-    data.pop('title', None)
-    data.pop('thumb', None)
-    data.pop('url_message', None)
-    data.pop('dl_message', None)
-    await state.set_data(data)
+    await state.finish()
 
-    await state.reset_state(with_data=False)
+
+@dp.message_handler(commands=['stat'])
+async def cmd_stat(message: types.Message):
+    user = await get_user(message)
+    total_dl_count, total_dl_size = await db.get_stat()
+    await message.answer(
+        f'Количество: {user["dl_count"]}\n'
+        f'Объём: {human_size(user["dl_size"])}\n'
+        f'Общее количество: {total_dl_count}\n'
+        f'Общий объём: {human_size(total_dl_size)}'
+    )
 
 
 @dp.message_handler(commands='help')
@@ -159,7 +182,7 @@ async def cmd_help(message: types.Message):
             md.text(f'Поделись ссылкой с ботом для извлечения аудио'),
             md.text(md.bold('\nКоманды бота')),
             *commands,
-            md.text(md.bold('\nРазработчик')),
+            md.text(md.bold('\nОшибки и пожелания сообщайте разработчику')),
             md.text(f'{config.DEVELOPER_NAME} {config.DEVELOPER_TELEGRAM}'),
             md.text(md.bold('\nИсходные коды бота')),
             md.text('[https://github.com/parusinf/audextractorbot]'
@@ -192,17 +215,36 @@ async def handle_url(message: types.Message, state: FSMContext):
         await state.update_data(dl_message=dl_message)
         await state.update_data(filename=filename)
         if filename:
-            data = await state.get_data()
-            if get_value('set_tag', data):
+            user = await get_user(message)
+            if user['set_tag'] is None:
+                await cmd_tag(message)
+            elif user['set_tag']:
                 await message.answer('Исполнитель', reply_markup=types.ReplyKeyboardRemove())
                 await Form.artist.set()
             else:
-                await send_audio(state)
+                await send_audio(message, state)
         else:
             await message.reply('Не получилось скачать аудио')
             await dl_message.delete()
     else:
         await message.reply(f'Поддерживаемые ссылки: {", ".join(SUPPORTED_URLS)}')
+
+
+async def get_user(message: types.Message):
+    user = await db.get_user(message.from_user.id)
+    if not user:
+        user = {
+            'user_id': message.from_user.id,
+            'username': message.from_user.username,
+            'user_first_name': message.from_user.first_name,
+            'user_last_name': message.from_user.last_name,
+            'set_tag': None,
+            'set_thumb': None,
+            'dl_count': 0,
+            'dl_size': 0,
+        }
+        await db.insert_user(user)
+    return user    
 
 
 def url_is_supported(url):

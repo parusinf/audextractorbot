@@ -1,3 +1,5 @@
 aiogram
 mutagen
 music-tag
+aiosqlite
+SQLAlchemy
