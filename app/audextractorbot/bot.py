@@ -17,7 +17,6 @@ import config.config as config
 from aiogram.bot.api import TelegramAPIServer
 import music_tag
 import app.store.database.models as db
-from app.sys.async_factory import AsyncFactory
 
 
 # Команды бота
