@@ -12,6 +12,7 @@ ENCODE_MP3 = False
 QUALITY = 6
 THUMB_FILENAME = 'thumb.jpg'
 DATABASE_FILE = '/var/lib/sqlite/audextractorbot.db'
+ERROR_FILE = 'error.log'
 
 USE_LOG_FILE = False
 LOG_FILE = '/tmp/audextractorbot.log'
