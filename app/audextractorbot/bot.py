@@ -132,7 +132,7 @@ async def send_audio(message: types.Message, state: FSMContext, dirpath):
     await state.finish()
 
 
-async def get_audio(message: types.Message, state: FSMContext, dirpath, url):
+async def get_audio(dirpath, url):
     def write_to_file(so, se):
         with open(config.ERROR_FILE, 'w') as text_file:
             text_file.write(f'{so}\n{se}')
@@ -219,7 +219,7 @@ async def handle_url(message: types.Message, state: FSMContext):
 
         # Извлечение аудио
         dirpath = tempfile.mkdtemp()
-        filename = await get_audio(message, state, dirpath, url)
+        filename = await get_audio(dirpath, url)
         await state.update_data(dirpath=dirpath)
         await state.update_data(filename=filename)
 
