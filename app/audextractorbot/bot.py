@@ -1,6 +1,7 @@
 import os
 import shutil
 import tempfile
+from os import walk
 import aiogram.utils.markdown as md
 from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -32,7 +33,6 @@ bot = Bot(token=config.BOT_TOKEN, server=local_server)
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 
-
 markup_yes_no = types.ReplyKeyboardMarkup(resize_keyboard=True, selective=True, one_time_keyboard=True)
 markup_yes_no.add('Да', 'Нет')
 
@@ -40,125 +40,120 @@ markup_yes_no.add('Да', 'Нет')
 # Состояния конечного автомата
 class Form(StatesGroup):
     set_tag = State()    # Установить исполнителя и заголовок?
+    set_thumb = State()  # Установить обложку?
     artist = State()     # Исполнитель
     title = State()      # Заголовок
+    thumb = State()      # Обложка
 
 
 @dp.message_handler(commands=['tag', 'start'])
 async def cmd_tag(message: types.Message):
-    await message.answer('Устанавливать исполнителя и заголовок аудио?', reply_markup=markup_yes_no)
+    await message.answer('Устанавливать заголовок и исполнителя?', reply_markup=markup_yes_no)
     await Form.set_tag.set()
 
 
 @dp.message_handler(state=Form.set_tag)
 async def handle_set_tag(message: types.Message, state: FSMContext):
-    # Сохранение настройки установки тегов
     set_tag = message.text == 'Да'
     user = await get_user(message)
     user.update({'set_tag': set_tag})
     await db.update_user(user)
-
-    # Установка тегов
+    await message.reply('/tag - настройка установки тегов')
     data = await state.get_data()
-    filename = get_value('filename', data)
-    if set_tag and filename is not None:
+    if get_value('filename', data):
+        await message.answer('Исполнитель', reply_markup=types.ReplyKeyboardRemove())
         await Form.artist.set()
-    elif filename is not None:
-        await send_audio(message, state, get_value('dirpath', data))
     else:
         await state.finish()
+    # await message.answer('Устанавливать обложку?', reply_markup=markup_yes_no)
+    # await Form.set_thumb.set()
+
+
+@dp.message_handler(state=Form.set_thumb)
+async def handle_set_thumb(message: types.Message, state: FSMContext):
+    set_thumb = message.text == 'Да'
+    user = await get_user(message)
+    user.update({'set_thumb': set_thumb})
+    await db.update_user(user)
+    await message.reply('/tag - настройка установки тегов', reply_markup=types.ReplyKeyboardRemove())
+    await state.finish()
 
 
 @dp.message_handler(state=Form.artist)
 async def handle_artist(message: types.Message, state: FSMContext):
     await state.update_data(artist=message.text)
+    await message.answer('Заголовок')
     await Form.title.set()
 
 
 @dp.message_handler(state=Form.title)
 async def handle_title(message: types.Message, state: FSMContext):
     await state.update_data(title=message.text)
+    user = await get_user(message)
+    if user['set_thumb']:
+        await message.answer('Обложка')
+        await Form.thumb.set()
+    else:
+        await send_audio(message, state)
+
+
+@dp.message_handler(state=Form.thumb, content_types=ContentType.PHOTO)
+async def handle_thumb(message: types.Message, state: FSMContext):
     data = await state.get_data()
     dirpath = get_value('dirpath', data)
-    await send_audio(message, state, dirpath)
+    await message.photo[0].download(destination_dir=dirpath)
+    await state.update_data(thumb=config.THUMB_FILENAME)
+    await send_audio(message, state)
 
 
-async def send_audio(message: types.Message, state: FSMContext, dirpath):
-    # Проверка наличия скачанного аудио и введённых тегов, если они требуются
+async def send_audio(message: types.Message, state: FSMContext):
+    # Подготовка данных
     data = await state.get_data()
-    filename = get_first_filename(dirpath)
-    title = get_value('title', data)
-    user = await get_user(message)
-    if filename is None or title is None and user['set_tag']:
-        return
-
-    # Подготовка остальных данных
+    dirpath = get_value('dirpath', data)
+    filename = get_value('filename', data)
     filepath = os.path.join(dirpath, filename)
-    artist = get_value('artist', data)
-    url_message = get_value('url_message', data)
+    url_message: types.Message = get_value('url_message', data)
     dl_message = get_value('dl_message', data)
+    user = await get_user(message)
 
-    # Обработка скачанного аудио
-    if filename != config.ERROR_FILE:
-        # Установка тегов
-        if user['set_tag']:
-            ext = os.path.splitext(filename)[1]
-            new_filename = f'{artist.replace(" ", "_")}__{title.replace(" ", "_")}{ext}'
-            new_filepath = os.path.join(dirpath, new_filename)
-            os.rename(filepath, new_filepath)
-            filename = new_filename
-            filepath = new_filepath
-            audiofile = music_tag.load_file(filepath)
-            audiofile['artist'] = artist
-            audiofile['title'] = title
-            audiofile.save()
+    # Установка тегов
+    artist = get_value('artist', data)
+    title = get_value('title', data)
+    thumb = get_value('thumb', data)
+    thumb_file = InputFile(os.path.join(dirpath, thumb), filename) if thumb else None
+    if user['set_tag']:
+        ext = os.path.splitext(filename)[1]
+        new_filename = f'{artist.replace(" ", "_")}__{title.replace(" ", "_")}{ext}'
+        new_filepath = os.path.join(dirpath, new_filename)
+        os.rename(filepath, new_filepath)
+        filename = new_filename
+        filepath = new_filepath
+        audiofile = music_tag.load_file(filepath)
+        audiofile['artist'] = artist
+        audiofile['title'] = title
+        if thumb:
+            with open(os.path.join(dirpath, thumb), 'rb') as img_in:
+                audiofile['artwork'] = img_in.read()
+        audiofile.save()
 
-        # Отправка аудио
-        await url_message.reply_audio(InputFile(filepath, filename), performer=artist, title=title)
+    # Отправка аудио
+    await url_message.reply_audio(
+        InputFile(filepath, filename),
+        performer=artist,
+        title=title,
+        thumb=thumb_file,
+    )
 
-        # Сбор статистики
-        dl_count = user['dl_count'] + 1
-        dl_size = user['dl_size'] + os.path.getsize(filepath)
-        user.update({'dl_count': dl_count, 'dl_size': dl_size})
-        await db.update_user(user)
-    else:
-        with open(filepath, 'r') as text_file:
-            text = text_file.read()
-        await message.reply(f'Не получилось скачать аудио\n{text}')
+    # Сбор статистики
+    dl_count = user['dl_count'] + 1
+    dl_size = user['dl_size'] + os.path.getsize(filepath)
+    user.update({'dl_count': dl_count, 'dl_size': dl_size})
+    await db.update_user(user)
 
     # Освобождение ресурсов
     shutil.rmtree(dirpath)
     await dl_message.delete()
     await state.finish()
-
-
-async def get_audio(dirpath, url):
-    def write_to_file(so, se):
-        with open(config.ERROR_FILE, 'w') as text_file:
-            text_file.write(f'{so}\n{se}')
-
-    format_code = await select_format(url)
-    retcode, stdout, stderr = await shell.run_and_logging(f'cd {dirpath}; yt-dlp -f {format_code} {url}')
-    if retcode == 0:
-        filename = get_first_filename(dirpath)
-        if url.find('rutube') > 0:
-            filename_wo_ext = os.path.splitext(filename)[0]
-            filename_mp3 = f'{filename_wo_ext}.mp3'
-            filepath_mp3 = os.path.join(dirpath, filename_mp3)
-            retcode, stdout, stderr = await shell.run_and_logging(
-                f'ffmpeg -i "{os.path.join(dirpath, filename)}" -codec:a libmp3lame '
-                f'-qscale:a {config.QUALITY} "{filepath_mp3}"'
-            )
-            if retcode == 0:
-                os.remove(filename)
-                filename = filename_mp3
-            else:
-                write_to_file(stdout, stderr)
-                filename = config.ERROR_FILE
-    else:
-        write_to_file(stdout, stderr)
-        filename = config.ERROR_FILE
-    return filename
 
 
 @dp.message_handler(commands=['stat'])
@@ -202,39 +197,25 @@ async def cmd_help(message: types.Message):
 async def handle_url(message: types.Message, state: FSMContext):
     url = message.text
     if url_is_supported(url):
-        # Инструкция пользователя
-        user = await get_user(message)
-        if user['set_tag'] is None:
-            dl_message = await message.reply(
-                '1. Устанавливать исполнителя и заголовок аудио?\n'
-                '2. Введите исполнителя и заголовок в отдельных сообщениях, если нужно\n'
-                '3. Дождитесь обработки аудио',
-                reply_markup=markup_yes_no)
-        elif user['set_tag']:
-            dl_message = await message.reply(
-                '1. Введите исполнителя и заголовок в отдельных сообщениях\n'
-                '2. Дождитесь обработки аудио')
-        else:
-            dl_message = await message.reply('Дождитесь обработки аудио')
-
-        # Извлечение аудио
+        dl_message = await message.reply(f'Скачиваю аудио...')
         dirpath = tempfile.mkdtemp()
-        filename = await get_audio(dirpath, url)
         await state.update_data(dirpath=dirpath)
-        await state.update_data(filename=filename)
-
-        # Сохранение сообщения со ссылкой для последующего ответа на него и сообщения о вводе тегов для его удаления
+        filename = await get_audio(url, dirpath, message)
         await state.update_data(url_message=message)
         await state.update_data(dl_message=dl_message)
-
-        # Подготовка тегов
-        if user['set_tag'] is None:
-            await Form.set_tag.set()
-        elif user['set_tag']:
-            await Form.artist.set()
-        # Отправка аудио
+        await state.update_data(filename=filename)
+        if filename:
+            user = await get_user(message)
+            if user['set_tag'] is None:
+                await cmd_tag(message)
+            elif user['set_tag']:
+                await message.answer('Исполнитель', reply_markup=types.ReplyKeyboardRemove())
+                await Form.artist.set()
+            else:
+                await send_audio(message, state)
         else:
-            await send_audio(message, state, dirpath)
+            await message.reply('Не получилось скачать аудио')
+            await dl_message.delete()
     else:
         await message.reply(f'Поддерживаемые ссылки: {", ".join(SUPPORTED_URLS)}')
 
@@ -248,11 +229,12 @@ async def get_user(message: types.Message):
             'user_first_name': message.from_user.first_name,
             'user_last_name': message.from_user.last_name,
             'set_tag': None,
+            'set_thumb': None,
             'dl_count': 0,
             'dl_size': 0,
         }
         await db.insert_user(user)
-    return user    
+    return user
 
 
 def url_is_supported(url):
@@ -268,9 +250,25 @@ def get_value(key, data):
     return data[key] if key in data else None
 
 
-def get_first_filename(dirpath):
-    filenames = next(os.walk(dirpath), (None, None, []))[2]
-    return filenames[0] if len(filenames) > 0 else None
+async def get_audio(url, dirpath, message):
+    format_code = await select_format(url)
+    retcode, stdout, stderr = await shell.run_and_logging(f'cd {dirpath}; yt-dlp -f {format_code} {url}')
+    if retcode == 0:
+        filename = next(walk(dirpath), (None, None, []))[2][0]
+        if url.find('rutube') > 0:
+            filename_wo_ext = os.path.splitext(filename)[0]
+            filename_mp3 = f'{filename_wo_ext}.mp3'
+            filepath_mp3 = os.path.join(dirpath, filename_mp3)
+            retcode = await shell.run(
+                f'ffmpeg -i "{os.path.join(dirpath, filename)}" -codec:a libmp3lame '
+                f'-qscale:a {config.QUALITY} "{filepath_mp3}"'
+            )
+            if retcode == 0:
+                filename = filename_mp3
+        return filename
+    else:
+        await message.reply(f'{stdout}\n{stderr}')
+        return None
 
 
 async def select_format(url):
