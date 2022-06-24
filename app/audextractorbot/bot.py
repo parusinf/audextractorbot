@@ -278,8 +278,13 @@ async def select_format(url):
         retcode, stdout, _ = await shell.run_and_logging(f'yt-dlp -F {url}')
         if retcode == 0:
             format_lines = stdout.splitlines()
+            header_line_index = 8
+            for i, line in enumerate(format_lines):
+                if line[:2] == 'ID':
+                    header_line_index = i
+                    break
             # первая строка в списке форматов с минимальным битрейтом
-            format_code = format_lines[7].split(' ')[0]
+            format_code = format_lines[header_line_index+2].split(' ')[0]
         else:
             format_code = None
     else:
