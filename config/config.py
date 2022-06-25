@@ -1,7 +1,7 @@
 import pathlib
 import tempfile
 import os.path
-from config.token import BOT_TOKEN
+from config.secret import BOT_TOKEN
 
 BASE_DIR = pathlib.Path(__file__).parent.parent
 PROGRAM = str(BASE_DIR).split(sep=os.path.sep)[-1]
@@ -26,10 +26,6 @@ CERTIFICATE_PATH = os.path.join(BASE_DIR, 'cert', 'api-parusinf-ru.crt')
 WEBHOOK_HOST = 'https://api.parusinf.ru'
 WEBHOOK_PATH = f'/bot{BOT_TOKEN}'
 WEBHOOK_URL = f'{WEBHOOK_HOST}{WEBHOOK_PATH}'
-
-# Web server
-WEBAPP_HOST = '0.0.0.0'
-WEBAPP_PORT = 5004
 
 # Telegram Bot API Server
 BOT_API_SERVER_URL = 'http://localhost:5000'

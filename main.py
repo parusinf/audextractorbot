@@ -8,6 +8,7 @@ from config.config import CERTIFICATE_PATH
 from pathlib import Path
 from aiogram.utils.executor import start_webhook
 import config.config as config
+from config.secret import BOT_PORT
 from app.audextractorbot.bot import bot, dp
 from app.sys.pid_file import read_pid_file, write_pid_file, remove_pid_file
 from app.store.database.models import db
@@ -72,8 +73,8 @@ if __name__ == '__main__':
             dispatcher=dp,
             webhook_path=config.WEBHOOK_PATH,
             skip_updates=True,
-            host=config.WEBAPP_HOST,
-            port=config.WEBAPP_PORT,
+            host='0.0.0.0',
+            port=BOT_PORT,
             on_startup=on_startup,
             on_shutdown=on_shutdown,
         )
