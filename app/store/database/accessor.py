@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
-import config.config as config
+from config.secret import DB_FILEPATH
 
 Base = declarative_base()
 
@@ -30,7 +30,7 @@ class SqliteAccessor:
 
     async def on_connect(self):
         self.engine = create_async_engine(
-            f'sqlite+aiosqlite:///{config.DATABASE_FILE}?cache=shared',
+            f'sqlite+aiosqlite:///{DB_FILEPATH}?cache=shared',
             echo=False,
         )
         async with self.engine.begin() as conn:
