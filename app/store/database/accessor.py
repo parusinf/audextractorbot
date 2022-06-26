@@ -17,7 +17,6 @@ class User(Base):
     user_first_name = Column(String)
     user_last_name = Column(String)
     set_tag = Column(Boolean, default=False)
-    set_thumb = Column(Boolean, default=False)
     dl_count = Column(Integer, default=0)
     dl_size = Column(Integer, default=0)
     __table_args__ = (UniqueConstraint('user_id', name='_user_user_id_uc'),)
