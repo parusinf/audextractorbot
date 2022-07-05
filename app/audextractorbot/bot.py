@@ -61,6 +61,7 @@ async def handle_set_tag(message: types.Message, state: FSMContext):
 
 @dp.message_handler(state=Form.artist)
 async def handle_artist(message: types.Message, state: FSMContext):
+    await save_message(message, state)
     await state.update_data(artist=message.text)
     title_message = await message.answer('Заголовок')
     await save_message(title_message, state)
@@ -69,6 +70,7 @@ async def handle_artist(message: types.Message, state: FSMContext):
 
 @dp.message_handler(state=Form.title)
 async def handle_title(message: types.Message, state: FSMContext):
+    await save_message(message, state)
     await state.update_data(title=message.text)
     await send_audio(message, state)
 
