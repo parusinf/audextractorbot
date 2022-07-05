@@ -154,8 +154,11 @@ async def cmd_help(message: types.Message):
 
 async def save_message(message: types.Message, state: FSMContext):
     data = await state.get_data()
-    messages = data['messages']
-    messages.add(message)
+    if 'messages' in data:
+        messages = data['messages']
+    else:
+        messages = []
+    messages.append(message)
     await state.update_data(messages=messages)
 
 
