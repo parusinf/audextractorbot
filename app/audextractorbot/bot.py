@@ -163,7 +163,7 @@ async def delete_messages(state: FSMContext):
     data = await state.get_data()
     messages = data['messages']
     for message in messages:
-        message.delete()
+        await message.delete()
     data.pop('messages')
     await state.update_data(data)
 
