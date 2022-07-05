@@ -56,14 +56,14 @@ async def handle_set_tag(message: types.Message, state: FSMContext):
     user = await get_user(message)
     user.update({'set_tag': set_tag})
     await db.update_user(user)
-    await message.reply('/tag - настройка установки тегов')
     await state.finish()
 
 
 @dp.message_handler(state=Form.artist)
 async def handle_artist(message: types.Message, state: FSMContext):
     await state.update_data(artist=message.text)
-    await message.answer('Заголовок')
+    title_message = await message.answer('Заголовок')
+    await save_message(title_message, state)
     await Form.title.set()
 
 
@@ -111,8 +111,7 @@ async def send_audio(message: types.Message, state: FSMContext):
 
     # Освобождение ресурсов
     shutil.rmtree(dirpath)
-    dl_message = get_value('dl_message', data)
-    await dl_message.delete()
+    await delete_messages(state)
     await state.finish()
 
 
@@ -153,14 +152,30 @@ async def cmd_help(message: types.Message):
     )
 
 
+async def save_message(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    messages = data['messages']
+    messages.add(message)
+    await state.update_data(messages=messages)
+
+
+async def delete_messages(state: FSMContext):
+    data = await state.get_data()
+    messages = data['messages']
+    for message in messages:
+        message.delete()
+    data.pop('messages')
+    await state.update_data(data)
+
+
 @dp.message_handler(content_types=ContentType.TEXT)
 async def handle_url(message: types.Message, state: FSMContext):
     await state.update_data(url_message=message)
     url = message.text
     if url_is_supported(url):
         # Сообщение о скачивании
-        dl_message = await message.reply(f'Скачиваю аудио...')
-        await state.update_data(dl_message=dl_message)
+        download_message = await message.reply(f'Скачиваю аудио...')
+        await save_message(download_message, state)
 
         # Временный каталог для скачивания
         dirpath = tempfile.mkdtemp()
@@ -174,14 +189,15 @@ async def handle_url(message: types.Message, state: FSMContext):
             # Установка тегов, если нужно
             user = await get_user(message)
             if user['set_tag']:
-                await message.answer('Исполнитель', reply_markup=types.ReplyKeyboardRemove())
+                artist_message = await message.answer('Исполнитель', reply_markup=types.ReplyKeyboardRemove())
+                await save_message(artist_message, state)
                 await Form.artist.set()
             # Отправка аудио
             else:
                 await send_audio(message, state)
         else:
             await message.reply('Не получилось скачать аудио')
-            await dl_message.delete()
+            await delete_messages(state)
     else:
         await message.reply(f'Поддерживаемые ссылки: {", ".join(SUPPORTED_URLS)}')
 
