@@ -10,6 +10,8 @@ from aiogram.dispatcher.filters.state import StatesGroup, State
 from aiogram.types.message import ContentType
 from aiogram.types.input_file import InputFile
 from aiogram.types import ParseMode
+from aiogram.utils.exceptions import MessageToDeleteNotFound
+
 from app.store.database.tools import human_size
 from app.sys import shell
 import config.config as config
@@ -21,6 +23,7 @@ import app.store.database.models as db
 # Команды бота
 BOT_COMMANDS = '''tag - настройка установки тегов
 stat - статистика
+reset - удаление настроек
 help - как пользоваться этим ботом?'''
 
 SUPPORTED_URLS = ['youtu', 'rutube']
@@ -129,6 +132,12 @@ async def cmd_stat(message: types.Message):
     )
 
 
+@dp.message_handler(commands=['reset'])
+async def cmd_reset(message: types.Message):
+    await db.delete_user(message.from_user.id)
+    await message.answer('Настройки удалены')
+
+
 @dp.message_handler(commands='help')
 async def cmd_help(message: types.Message):
     """Что может делать этот бот?"""
@@ -166,11 +175,16 @@ async def save_message(message: types.Message, state: FSMContext):
 
 async def delete_messages(state: FSMContext):
     data = await state.get_data()
-    messages = data['messages']
-    for message in messages:
-        await message.delete()
-    data.pop('messages')
-    await state.update_data(data)
+    if 'messages' in data:
+        messages = data['messages']
+        if messages:
+            for message in messages:
+                try:
+                    await message.delete()
+                except MessageToDeleteNotFound:
+                    pass
+            data.pop('messages')
+            await state.update_data(data)
 
 
 @dp.message_handler(content_types=ContentType.TEXT)
