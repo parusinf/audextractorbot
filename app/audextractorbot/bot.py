@@ -23,7 +23,7 @@ import app.store.database.models as db
 # Команды бота
 BOT_COMMANDS = '''tag - настройка установки тегов
 stat - статистика
-reset - удаление настроек
+reset - сброс состояния бота
 help - как пользоваться этим ботом?'''
 
 SUPPORTED_URLS = ['youtu', 'rutube']
@@ -133,9 +133,9 @@ async def cmd_stat(message: types.Message):
 
 
 @dp.message_handler(commands=['reset'])
-async def cmd_reset(message: types.Message):
-    await db.delete_user(message.from_user.id)
-    await message.answer('Настройки удалены')
+async def cmd_reset(message: types.Message, state: FSMContext):
+    await state.finish()
+    await message.answer('Состояние бота сброшено')
 
 
 @dp.message_handler(commands='help')
