@@ -11,6 +11,7 @@ from aiogram.types.message import ContentType
 from aiogram.types.input_file import InputFile
 from aiogram.types import ParseMode
 from aiogram.utils.exceptions import MessageToDeleteNotFound
+from mutagen import MutagenError
 
 from app.store.database.tools import human_size
 from app.sys import shell
@@ -55,27 +56,36 @@ async def cmd_tag(message: types.Message):
 
 @dp.message_handler(state=Form.set_tag)
 async def handle_set_tag(message: types.Message, state: FSMContext):
-    set_tag = message.text == 'Да'
-    user = await get_user(message)
-    user.update({'set_tag': set_tag})
-    await db.update_user(user)
-    await state.finish()
+    if message.text[:1] == '/':
+        await state.finish()
+    else:
+        set_tag = message.text == 'Да'
+        user = await get_user(message)
+        user.update({'set_tag': set_tag})
+        await db.update_user(user)
+        await state.finish()
 
 
 @dp.message_handler(state=Form.artist)
 async def handle_artist(message: types.Message, state: FSMContext):
-    await save_message(message, state)
-    await state.update_data(artist=message.text)
-    title_message = await message.answer('Заголовок')
-    await save_message(title_message, state)
-    await Form.title.set()
+    if message.text[:1] == '/':
+        await state.finish()
+    else:
+        await save_message(message, state)
+        await state.update_data(artist=message.text)
+        title_message = await message.answer('Заголовок')
+        await save_message(title_message, state)
+        await Form.title.set()
 
 
 @dp.message_handler(state=Form.title)
 async def handle_title(message: types.Message, state: FSMContext):
-    await save_message(message, state)
-    await state.update_data(title=message.text)
-    await send_audio(message, state)
+    if message.text[:1] == '/':
+        await state.finish()
+    else:
+        await save_message(message, state)
+        await state.update_data(title=message.text)
+        await send_audio(message, state)
 
 
 async def send_audio(message: types.Message, state: FSMContext):
@@ -102,7 +112,10 @@ async def send_audio(message: types.Message, state: FSMContext):
         audiofile = music_tag.load_file(filepath)
         audiofile['artist'] = artist
         audiofile['title'] = title
-        audiofile.save()
+        try:
+            audiofile.save()
+        except MutagenError:
+            pass
 
     # Отправка аудио
     url_message: types.Message = get_value('url_message', data)
