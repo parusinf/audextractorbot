@@ -56,7 +56,7 @@ async def cmd_tag(message: types.Message):
 
 @dp.message_handler(state=Form.set_tag)
 async def handle_set_tag(message: types.Message, state: FSMContext):
-    if message.text[:1] == '/':
+    if message.text[:1] == '/' or message.text[:4] == 'http':
         await state.finish()
     else:
         set_tag = message.text == 'Да'
@@ -68,7 +68,7 @@ async def handle_set_tag(message: types.Message, state: FSMContext):
 
 @dp.message_handler(state=Form.artist)
 async def handle_artist(message: types.Message, state: FSMContext):
-    if message.text[:1] == '/':
+    if message.text[:1] == '/' or message.text[:4] == 'http':
         await state.finish()
     else:
         await save_message(message, state)
@@ -80,7 +80,7 @@ async def handle_artist(message: types.Message, state: FSMContext):
 
 @dp.message_handler(state=Form.title)
 async def handle_title(message: types.Message, state: FSMContext):
-    if message.text[:1] == '/':
+    if message.text[:1] == '/' or message.text[:4] == 'http':
         await state.finish()
     else:
         await save_message(message, state)
@@ -109,10 +109,10 @@ async def send_audio(message: types.Message, state: FSMContext):
             pass
         filename = new_filename
         filepath = new_filepath
-        audiofile = music_tag.load_file(filepath)
-        audiofile['artist'] = artist
-        audiofile['title'] = title
         try:
+            audiofile = music_tag.load_file(filepath)
+            audiofile['artist'] = artist
+            audiofile['title'] = title
             audiofile.save()
         except MutagenError:
             pass
