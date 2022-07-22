@@ -118,8 +118,7 @@ async def send_audio(message: types.Message, state: FSMContext):
             pass
 
     # Отправка аудио
-    url_message: types.Message = get_value('url_message', data)
-    await url_message.reply_audio(InputFile(filepath, filename), performer=artist, title=title)
+    await message.answer_audio(InputFile(filepath, filename), performer=artist, title=title)
 
     # Сбор статистики
     dl_count = user['dl_count'] + 1
@@ -159,7 +158,7 @@ async def cmd_help(message: types.Message):
         return md.text(md.link(f'/{command}', f'/{command}'), f' - {desc}')
 
     commands = [format_command(cl) for cl in BOT_COMMANDS.splitlines()]
-    await message.reply(
+    await message.answer(
         md.text(
             md.text(f'Поделись ссылкой с ботом для извлечения аудио'),
             md.text(md.bold('\nКоманды бота')),
@@ -206,7 +205,7 @@ async def handle_url(message: types.Message, state: FSMContext):
     url = message.text
     if url_is_supported(url):
         # Сообщение о скачивании
-        download_message = await message.reply(f'Скачиваю аудио...')
+        download_message = await message.answer('Скачиваю аудио...')
         await save_message(download_message, state)
 
         # Временный каталог для скачивания
@@ -228,10 +227,10 @@ async def handle_url(message: types.Message, state: FSMContext):
             else:
                 await send_audio(message, state)
         else:
-            await message.reply('Не получилось скачать аудио')
+            await message.answer('Не получилось скачать аудио')
             await delete_messages(state)
     else:
-        await message.reply(f'Поддерживаемые ссылки: {", ".join(SUPPORTED_URLS)}')
+        await message.answer(f'Поддерживаемые ссылки: {", ".join(SUPPORTED_URLS)}')
 
 
 async def get_user(message: types.Message):
@@ -280,7 +279,7 @@ async def get_audio(url, dirpath, message):
                 filename = filename_mp3
         return filename
     else:
-        await message.reply(f'{stdout}\n{stderr}')
+        await message.answer(f'{stdout}\n{stderr}')
         return None
 
 
