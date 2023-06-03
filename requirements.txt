@@ -1,5 +1,5 @@
-aiogram
-mutagen
-music-tag
-aiosqlite
-SQLAlchemy
+aiogram~=2.25.1
+mutagen~=1.46.0
+music-tag~=0.4.3
+aiosqlite~=0.19.0
+SQLAlchemy~=2.0.15
