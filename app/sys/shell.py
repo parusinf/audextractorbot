@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import config.config as config
-from tools.cp1251 import decode_cp1251
 
 
 async def run_and_logging(cmd) -> (int, str, str):
