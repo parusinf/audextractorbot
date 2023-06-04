@@ -8,8 +8,10 @@ platform_system = platform.system()
 
 if 'Windows' == platform_system:
     command_sep = ' && '
+    console_encoding = 'cp866'
 else:
     command_sep = '; '
+    console_encoding = ''
 
 BASE_DIR = pathlib.Path(__file__).parent.parent
 PROGRAM = str(BASE_DIR).split(sep=os.path.sep)[-1]
