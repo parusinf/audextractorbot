@@ -15,7 +15,9 @@ from app.store.database.models import db
 
 logging.basicConfig(
     filename=config.LOG_FILE if config.USE_LOG_FILE else None,
-    level=logging.INFO)
+    level=logging.INFO,
+    encoding=config.preferredencoding,
+)
 
 
 async def on_startup(_: Dispatcher):

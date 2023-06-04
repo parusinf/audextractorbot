@@ -2,6 +2,14 @@ import pathlib
 import tempfile
 import os.path
 from config.secret import BOT_TOKEN
+import platform
+
+platform_system = platform.system()
+
+if 'Windows' == platform_system:
+    command_sep = ' && '
+else:
+    command_sep = '; '
 
 BASE_DIR = pathlib.Path(__file__).parent.parent
 PROGRAM = str(BASE_DIR).split(sep=os.path.sep)[-1]

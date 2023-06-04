@@ -1,0 +1,11 @@
+<service>
+  <id>audextractorbot</id>
+  <name>audextractorbot</name>
+  <description>audextractorbot</description>
+  <executable>c:\opt\Python311\python.exe</executable>
+  <logpath>c:\var\log\audextractorbot\</logpath>
+  <logmode>roll</logmode>
+  <depend>nginx</depend>
+  <depend>telegram-bot-api</depend>
+  <startargument>c:\srv\audextractorbot\main.py</startargument>
+</service>
