@@ -37,7 +37,7 @@ WEBHOOK_PATH = f'/bot{BOT_TOKEN}'
 WEBHOOK_URL = f'{WEBHOOK_HOST}{WEBHOOK_PATH}'
 
 # Telegram Bot API Server
-BOT_API_SERVER_URL = 'http://localhost:5000'
+BOT_API_SERVER_URL = 'http://localhost:8081'
 
 # Разработчик
 DEVELOPER_NAME = 'Павел Никитин'

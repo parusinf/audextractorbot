@@ -1,7 +1,7 @@
 [Unit]
 Description=Telegram bot @audextractorbot_bot
 After=network-online.target
-Requires=network-online.target
+Requires=network-online.target telegram-bot-api.service
 
 [Service]
 ExecStart=/srv/audextractorbot/venv/bin/python /srv/audextractorbot/main.py

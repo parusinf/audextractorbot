@@ -12,8 +12,12 @@ async def run_and_logging(cmd) -> (int, str, str):
     stdout, stderr = await proc.communicate()
 
     logging.info(f'[{cmd!r} exited with {proc.returncode}]')
-    stdout_content = stdout.decode(config.console_encoding)
-    stderr_content = stderr.decode(config.console_encoding)
+    if config.console_encoding:
+        stdout_content = stdout.decode(config.console_encoding)
+        stderr_content = stderr.decode(config.console_encoding)
+    else:
+        stdout_content = stdout
+        stderr_content = stderr
 
     if stdout:
         logging.info(stdout_content)
