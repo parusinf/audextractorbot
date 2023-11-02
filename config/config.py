@@ -17,6 +17,7 @@ BASE_DIR = pathlib.Path(__file__).parent.parent
 PROGRAM = str(BASE_DIR).split(sep=os.path.sep)[-1]
 TEMP_DIR = tempfile.gettempdir()
 
+YTDLP = '/opt/bin/yt-dlp'
 TUBE_FORMAT = 140
 ENCODE_MP3 = False
 QUALITY = 6

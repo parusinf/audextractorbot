@@ -16,8 +16,8 @@ async def run_and_logging(cmd) -> (int, str, str):
         stdout_content = stdout.decode(config.console_encoding)
         stderr_content = stderr.decode(config.console_encoding)
     else:
-        stdout_content = stdout
-        stderr_content = stderr
+        stdout_content = stdout.decode()
+        stderr_content = stderr.decode()
 
     if stdout:
         logging.info(stdout_content)

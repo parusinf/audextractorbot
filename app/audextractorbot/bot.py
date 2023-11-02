@@ -264,7 +264,8 @@ def get_value(key, data):
 
 async def get_audio(url, dirpath, message):
     format_code = await select_format(url)
-    retcode, stdout, stderr = await shell.run_and_logging(f'cd {dirpath}{config.command_sep}yt-dlp -f {format_code} {url}')
+    command = f'cd {dirpath}{config.command_sep}{config.YTDLP} -f {format_code} {url}'
+    retcode, stdout, stderr = await shell.run_and_logging(command)
     if retcode == 0:
         filename = next(walk(dirpath), (None, None, []))[2][0]
         if url.find('rutube') > 0:
