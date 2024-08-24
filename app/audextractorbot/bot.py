@@ -52,6 +52,7 @@ class Form(StatesGroup):
 async def cmd_tag(message: types.Message):
     await message.answer('Устанавливать заголовок и исполнителя?', reply_markup=markup_yes_no)
     await Form.set_tag.set()
+    return
 
 
 @dp.message_handler(state=Form.set_tag)
@@ -64,6 +65,7 @@ async def handle_set_tag(message: types.Message, state: FSMContext):
         user.update({'set_tag': set_tag})
         await db.update_user(user)
         await state.finish()
+    return
 
 
 @dp.message_handler(state=Form.artist)
@@ -76,6 +78,7 @@ async def handle_artist(message: types.Message, state: FSMContext):
         title_message = await message.answer('Заголовок')
         await save_message(title_message, state)
         await Form.title.set()
+    return
 
 
 @dp.message_handler(state=Form.title)
@@ -86,7 +89,7 @@ async def handle_title(message: types.Message, state: FSMContext):
         await save_message(message, state)
         await state.update_data(title=message.text)
         await send_audio(message, state)
-
+    return
 
 async def send_audio(message: types.Message, state: FSMContext):
     # Временный каталог и имя скачанного аудио
@@ -130,6 +133,7 @@ async def send_audio(message: types.Message, state: FSMContext):
     shutil.rmtree(dirpath)
     await delete_messages(state)
     await state.finish()
+    return
 
 
 @dp.message_handler(commands=['stat'])
@@ -142,12 +146,14 @@ async def cmd_stat(message: types.Message):
         f'Общее количество: {total_dl_count}\n'
         f'Общий объём: {human_size(total_dl_size)}'
     )
+    return
 
 
 @dp.message_handler(commands=['reset'])
 async def cmd_reset(message: types.Message, state: FSMContext):
     await state.finish()
     await message.answer('Состояние бота сброшено')
+    return
 
 
 @dp.message_handler(commands='help')
@@ -160,17 +166,11 @@ async def cmd_help(message: types.Message):
     commands = [format_command(cl) for cl in BOT_COMMANDS.splitlines()]
     await message.answer(
         md.text(
-            md.text(md.bold('ОТПРАВЬТЕ БОТУ ССЫЛКУ ДЛЯ ИЗВЛЕЧЕНИЯ АУДИО')),
+            md.text(md.bold('Отправьте боту ссылку на видео ютуб или рутуб')),
             md.text(md.bold('\nКоманды бота')),
             *commands,
-            md.text(md.bold('\nБот работает на хостинге с платным трафиком. Поддержите канал разработчика [https://t.me/zdorovie_i_protsvetanie](https://t.me/zdorovie_i_protsvetanie)')),
-            #md.text('1 месяц - 100 рублей'),
-            #md.text('1 год - 1000 рублей'),
-            #md.text(md.bold('\nРеквизиты')),
-            #md.text('ИП Никитин Павел Александрович'),
-            #md.text('ИНН 667341199471'),
-            #md.text('Счёт 40802810900002686224'),
-            #md.text('БИК 044525974'),
+            md.text(md.bold('\nПодписка')),
+            md.text('1 месяц - 100р, 1 год - 1000р СБП Т-Банк +79160704494'),
             md.text(md.bold('\nРазработчик')),
             md.text(f'Телеграм {config.DEVELOPER_TELEGRAM}'),
             md.text(md.bold('\nИсходные коды')),
@@ -181,6 +181,7 @@ async def cmd_help(message: types.Message):
         reply_markup=types.ReplyKeyboardRemove(),
         parse_mode=ParseMode.MARKDOWN,
     )
+    return
 
 
 async def save_message(message: types.Message, state: FSMContext):
@@ -191,6 +192,7 @@ async def save_message(message: types.Message, state: FSMContext):
         messages = []
     messages.append(message)
     await state.update_data(messages=messages)
+    return
 
 
 async def delete_messages(state: FSMContext):
@@ -240,6 +242,7 @@ async def handle_url(message: types.Message, state: FSMContext):
             await delete_messages(state)
     else:
         await message.answer(f'Поддерживаемые ссылки: {", ".join(SUPPORTED_URLS)}')
+    return
 
 
 async def get_user(message: types.Message):
