@@ -12,7 +12,7 @@ from aiogram.types.input_file import InputFile
 from aiogram.types import ParseMode
 from aiogram.utils.exceptions import MessageToDeleteNotFound
 from mutagen import MutagenError
-
+import re
 from app.store.database.tools import human_size
 from app.sys import shell
 import config.config as config
@@ -160,14 +160,22 @@ async def cmd_help(message: types.Message):
     commands = [format_command(cl) for cl in BOT_COMMANDS.splitlines()]
     await message.answer(
         md.text(
-            md.text(f'Поделись ссылкой с ботом для извлечения аудио'),
+            md.text(md.bold('ОТПРАВЬТЕ БОТУ ССЫЛКУ ДЛЯ ИЗВЛЕЧЕНИЯ АУДИО')),
             md.text(md.bold('\nКоманды бота')),
             *commands,
-            md.text(md.bold('\nОшибки и пожелания сообщайте разработчику')),
-            md.text(f'{config.DEVELOPER_NAME} {config.DEVELOPER_TELEGRAM}'),
-            md.text(md.bold('\nИсходные коды бота')),
-            md.text('[https://github.com/parusinf/audextractorbot]'
-                    '(https://github.com/parusinf/audextractorbot)'),
+            md.text(md.bold('\nБот работает на хостинге с платным трафиком. Поддержите канал разработчика [https://t.me/zdorovie_i_protsvetanie](https://t.me/zdorovie_i_protsvetanie)')),
+            #md.text('1 месяц - 100 рублей'),
+            #md.text('1 год - 1000 рублей'),
+            #md.text(md.bold('\nРеквизиты')),
+            #md.text('ИП Никитин Павел Александрович'),
+            #md.text('ИНН 667341199471'),
+            #md.text('Счёт 40802810900002686224'),
+            #md.text('БИК 044525974'),
+            md.text(md.bold('\nРазработчик')),
+            md.text(f'Телеграм {config.DEVELOPER_TELEGRAM}'),
+            md.text(md.bold('\nИсходные коды')),
+            md.text('[https://gitverse.ru/doomkin/audextractorbot]'
+                    '(https://gitverse.ru/doomkin/audextractorbot)'),
             sep='\n',
         ),
         reply_markup=types.ReplyKeyboardRemove(),
@@ -202,7 +210,8 @@ async def delete_messages(state: FSMContext):
 @dp.message_handler(content_types=ContentType.TEXT)
 async def handle_url(message: types.Message, state: FSMContext):
     await state.update_data(url_message=message)
-    url = message.text
+    url_draft = message.text
+    url = re.search(r'(?P<url>https?://\S+)', url_draft).group('url')
     if url_is_supported(url):
         # Сообщение о скачивании
         download_message = await message.answer('Скачиваю аудио...')

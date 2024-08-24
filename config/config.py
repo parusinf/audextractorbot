@@ -41,5 +41,5 @@ WEBHOOK_URL = f'{WEBHOOK_HOST}{WEBHOOK_PATH}'
 BOT_API_SERVER_URL = 'http://localhost:8081'
 
 # Разработчик
-DEVELOPER_NAME = 'Павел Никитин'
+DEVELOPER_NAME = 'ИП Никитин Павел Александрович'
 DEVELOPER_TELEGRAM = '@nikitinpa'
