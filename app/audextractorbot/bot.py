@@ -171,6 +171,7 @@ async def cmd_help(message: types.Message):
             *commands,
             md.text(md.bold('\nПодписка')),
             md.text('1 месяц - 100р, 1 год - 1000р СБП Т-Банк +79160704494'),
+            md.text('Благодарю за поддержку! Бот работает на платном хостинге с платным трафиком.'),
             md.text(md.bold('\nРазработчик')),
             md.text(f'Телеграм {config.DEVELOPER_TELEGRAM}'),
             md.text(md.bold('\nИсходные коды')),
