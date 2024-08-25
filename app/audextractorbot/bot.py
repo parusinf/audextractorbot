@@ -174,10 +174,6 @@ async def cmd_help(message: types.Message):
             md.text('Благодарю за поддержку! Бот работает на платном хостинге с платным трафиком.'),
             md.text(md.bold('\nРазработчик')),
             md.text(f'Телеграм {config.DEVELOPER_TELEGRAM}'),
-            md.text(md.bold('\nИсходные коды')),
-            md.text('[https://gitverse.ru/doomkin/audextractorbot]'
-                    '(https://gitverse.ru/doomkin/audextractorbot)'),
-            sep='\n',
         ),
         reply_markup=types.ReplyKeyboardRemove(),
         parse_mode=ParseMode.MARKDOWN,
