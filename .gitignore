@@ -6,3 +6,4 @@ audextractorbot.db
 /config/tqueue.binlog
 /config/webhooks_db.binlog
 /config/telegram-bot-api.service
+/.gigaide/gigaide.properties

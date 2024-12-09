@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 import enum
 import math
 
@@ -13,7 +13,7 @@ def row_to_dict(row) -> Optional[dict]:
         return None
 
 
-def rows_to_list(rows) -> list[dict]:
+def rows_to_list(rows) -> List[dict]:
     out = []
     if rows:
         for row in rows:
