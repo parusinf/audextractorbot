@@ -1,11 +1,11 @@
 <service>
   <id>audextractorbot</id>
   <name>audextractorbot</name>
-  <description>audextractorbot</description>
-  <executable>c:\opt\Python311\python.exe</executable>
-  <logpath>c:\var\log\audextractorbot\</logpath>
+  <description>Telegram bot for extracting audio from youtube @audextractorbot</description>
+  <executable>C:\Users\System-DBA\AppData\Local\Programs\Python\Python38\python.exe</executable>
+  <logpath>C:\nikitin\audextractorbot\</logpath>
   <logmode>roll</logmode>
   <depend>nginx</depend>
   <depend>telegram-bot-api</depend>
-  <startargument>c:\srv\audextractorbot\main.py</startargument>
+  <startargument>C:\nikitin\audextractorbot\main.py</startargument>
 </service>
